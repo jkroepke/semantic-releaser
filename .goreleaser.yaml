@@ -2,8 +2,11 @@ version: 2
 
 builds:
   - binary: helm-charts-semantic-releaser
+    main: ./cmd/helm-charts-semantic-releaser
     goos:
       - linux
+      - darwin
+      - windows
     goarch:
       - amd64
       - arm64
@@ -12,9 +15,6 @@ builds:
       - CGO_ENABLED=0
     flags:
       - -trimpath
-    tags:
-      - netgo
-      - static_build
     ldflags:
       - >-
         -s -w

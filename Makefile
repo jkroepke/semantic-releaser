@@ -54,10 +54,10 @@ update:  ## Run dependency updates
 	@go mod tidy
 
 .PHONY: build  ## Build the project
-build: clean $(PROJECT_NAME)
+build: clean $(PROJECT_NAME)$(EXT)
 
-$(PROJECT_NAME):
-	@go build -o $(PROJECT_NAME)$(EXT) .
+$(PROJECT_NAME)$(EXT):
+	@go build -o $(PROJECT_NAME)$(EXT) ./cmd/$(PROJECT_NAME)
 
 .PHONY: test
 test:  ## Test the project

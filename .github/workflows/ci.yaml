@@ -1,7 +1,7 @@
 name: CI
 
 env:
-  # renovate: github=golangci/golangci-lint
+  # renovate: gomod=github.com/golangci/golangci-lint
   GO_LINT_CI_VERSION: v1.59.1
 
 on:
@@ -26,7 +26,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
-      - run: go build
+      - run: go build ./cmd/helm-charts-semantic-releaser
       - run: go test ./... -timeout 20s -race -covermode=atomic -coverprofile=coverage.out -coverpkg=./...
       - run: go test ./... -timeout 20s -bench . -benchmem -count 3
 

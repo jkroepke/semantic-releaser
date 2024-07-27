@@ -1,0 +1,67 @@
+version: 2
+
+builds:
+  - binary: $REPO
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    tags:
+      - netgo
+      - static_build
+    ldflags:
+      - >-
+        -s -w
+
+# kos:
+#   - repository: ghcr.io/jkroepke/$REPO
+#     tags:
+#       - "{{.Version}}"
+#       - latest
+#     bare: true
+#     base_image: gcr.io/distroless/static-debian12:nonroot # scratch is not supported, see https://github.com/ko-build/ko/pull/1350
+#     preserve_import_paths: false
+#     creation_time: "{{.CommitTimestamp}}"
+#     ko_data_creation_time: "{{.CommitTimestamp}}"
+#     platforms:
+#       - linux/amd64
+#       - linux/arm64
+#     labels:
+#       org.opencontainers.image.created: "{{.Date}}"
+#       org.opencontainers.image.title: "{{.ProjectName}}"
+#       org.opencontainers.image.revision: "{{.FullCommit}}"
+#       org.opencontainers.image.version: "{{.Version}}"
+#       org.opencontainers.image.source: "https://github.com/jkroepke/$REPO"
+#       org.opencontainers.image.description: "Infinity Datasource Proxy is a middleware designed to enhance the functionality of the Infinity Datasource plugin for Grafana by addressing its limitations and extending its capabilities."
+#
+# docker_signs:
+#   - artifacts: manifests
+#     output: true
+#     cmd: cosign
+#     env:
+#       - COSIGN_EXPERIMENTAL=1
+#     args:
+#       - sign
+#       - '--oidc-issuer={{if index .Env "CI"}}https://token.actions.githubusercontent.com{{else}}https://oauth2.sigstore.dev/auth{{end}}'
+#       - '--yes'
+#       - '${artifact}'
+
+report_sizes: true
+
+metadata:
+  mod_timestamp: "{{ .CommitTimestamp }}"
+
+gomod:
+  proxy: true
+
+release:
+  prerelease: auto
+
+changelog:
+  use: github-native

@@ -49,9 +49,11 @@ func (c *Changelog) SetRemote(remoteURL string) {
 	case regexpGithubRepoInfos.MatchString(remoteURL):
 		matches := regexpGithubRepoInfos.FindStringSubmatch(remoteURL)
 
-		c.links.compareURL = "https://github.com/%s/compare/%%s...%" + matches[1]
+		//nolint:perfsprint
+		c.links.compareURL = fmt.Sprintf("https://github.com/%s/compare/%%s...%%s", matches[1])
 		c.links.prURL = fmt.Sprintf("https://github.com/%s/pull/$1", matches[1])
-		c.links.commitURL = "https://github.com/%s/commit/%" + matches[1]
+		//nolint:perfsprint
+		c.links.commitURL = fmt.Sprintf("https://github.com/%s/commit/%%s", matches[1])
 	}
 }
 

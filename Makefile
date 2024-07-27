@@ -68,16 +68,14 @@ lint: golangci  ## Run linter
 
 .PHONY: fmt  ## Format code
 fmt: install-tools
-	@go fmt ./...
-	@.tools/gci write .
-	@.tools/gofumpt -l -w .
-	@.tools/golangci-lint -l -w .
-	@.tools/goimports -l -w .
-	@.tools/wsl -strict-append -test=true -fix ./...
-	@.tools/perfsprint -fix ./...
-	@.tools/godot -w .
-	# @-go run go run github.com/ssgreg/nlreturn/v2/cmd/nlreturn@latest -fix ./...
-	@.tools/golangci-lint run ./... --fix
+	@-go fmt ./...
+	@-tools/bin/gci write .
+	@-tools/bin/gofumpt -l -w .
+	@-tools/bin/goimports -l -w .
+	@-tools/bin/wsl -strict-append -test=true -fix ./...
+	@-tools/bin/perfsprint -fix ./...
+	@-tools/bin/godot -w .
+	@tools/bin/golangci-lint run ./... --fix
 
 .PHONY: golangci
 golangci:
@@ -95,14 +93,14 @@ golangci:
 TOOLS_MOD_DIR    := tools
 TOOLS_MOD_REGEX  := "\s+_\s+\".*\""
 TOOLS_PKG_NAMES  := $(shell grep -E $(TOOLS_MOD_REGEX) < $(TOOLS_MOD_DIR)/tools.go | tr -d " _\"")
-TOOLS_BIN_DIR    := .tools
+TOOLS_BIN_DIR    := bin
 TOOLS_BIN_NAMES  := $(addprefix $(TOOLS_BIN_DIR)/, $(notdir $(TOOLS_PKG_NAMES)))
 
 .PHONY: install-tools
 install-tools: $(TOOLS_BIN_NAMES)
 
 $(TOOLS_BIN_DIR):
-	mkdir -p $@
+	@mkdir -p $@
 
 $(TOOLS_BIN_NAMES): $(TOOLS_BIN_DIR) $(TOOLS_MOD_DIR)/go.mod
 	go build -C $(TOOLS_MOD_DIR) -o $@ -trimpath $(filter %/$(notdir $@),$(TOOLS_PKG_NAMES))

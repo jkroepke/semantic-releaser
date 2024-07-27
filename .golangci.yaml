@@ -40,6 +40,6 @@ linters-settings:
       - r *http.Request
       - l net.Listener
       - t reflect.Type
-      - sb strings.Builder
+      - sb *strings.Builder
   lll:
     line-length: 160

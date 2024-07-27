@@ -176,6 +176,7 @@ func (c *Chart) getGitTag(version string) string {
 	return strings.NewReplacer("{chart}", c.name, "{version}", version).Replace(c.conf.GitTagPattern)
 }
 
+//nolint:cyclop
 func (c *Chart) DetectRelease() (semver.Version, *changelog.Changelog, error) {
 	repoLogs, err := c.repo.Log(&git.LogOptions{
 		PathFilter: func(s string) bool {
@@ -189,6 +190,10 @@ func (c *Chart) DetectRelease() (semver.Version, *changelog.Changelog, error) {
 	changelogEntries := changelog.New()
 	changelogEntries.SetOldVersion(c.currentVersion.String())
 
+	if remote, err := c.repo.Remote("origin"); err == nil {
+		changelogEntries.SetRemote(remote.Config().URLs[0])
+	}
+
 	bump := cc.UnknownVersion
 
 	tagCommitHash := ""
@@ -199,31 +204,36 @@ func (c *Chart) DetectRelease() (semver.Version, *changelog.Changelog, error) {
 	}
 
 	for log, err := repoLogs.Next(); err == nil; _, err = repoLogs.Next() {
-		if tagCommitHash == log.Hash.String() {
+		commitHash := log.Hash.String()
+		if tagCommitHash == commitHash {
 			break
 		}
 
+		// parse only the first line of the message
+		log.Message, _, _ = strings.Cut(log.Message, "\n")
+
 		commitVersionBump, _ := c.parseCommitMessage([]byte(log.Message))
+		commitHash = commitHash[:7]
 
 		switch commitVersionBump {
 		case cc.MajorVersion:
 			bump = cc.MajorVersion
 
-			changelogEntries.AddBreaking(log.Message)
+			changelogEntries.AddBreaking(log.Message, commitHash)
 			c.logger.Info().Str("message", log.Message).Msg("MAJOR")
 		case cc.MinorVersion:
 			if bump != cc.MajorVersion {
 				bump = cc.MinorVersion
 			}
 
-			changelogEntries.AddFeature(log.Message)
+			changelogEntries.AddFeature(log.Message, commitHash)
 			c.logger.Info().Str("message", log.Message).Msg("MINOR")
 		case cc.PatchVersion:
 			if bump == cc.UnknownVersion {
 				bump = cc.PatchVersion
 			}
 
-			changelogEntries.AddFix(log.Message)
+			changelogEntries.AddFix(log.Message, commitHash)
 			c.logger.Info().Str("message", log.Message).Msg("PATCH")
 		case cc.UnknownVersion:
 			c.logger.Info().Str("message", log.Message).Msg("SKIP")

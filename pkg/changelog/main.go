@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -12,11 +13,27 @@ import (
 type Changelog struct {
 	newVersion string
 	oldVersion string
-	link       string
-	breaking   []string
-	fixes      []string
-	features   []string
+	links      links
+	breaking   []commit
+	fixes      []commit
+	features   []commit
 }
+
+type commit struct {
+	hash    string
+	message string
+}
+
+type links struct {
+	compareURL string
+	prURL      string
+	commitURL  string
+}
+
+var (
+	regexpPRNumber        = regexp.MustCompile(`\(#(\d+)\)$`)
+	regexpGithubRepoInfos = regexp.MustCompile(`^(?:https://github\.com/|git@github\.com:|ssh://git@github\.com/)([^/:]+/[^/:]+?)(?:\.git)?$`)
+)
 
 func New() *Changelog {
 	return &Changelog{}
@@ -24,6 +41,18 @@ func New() *Changelog {
 
 func (c *Changelog) Len() int {
 	return len(c.breaking) + len(c.fixes) + len(c.features)
+}
+
+func (c *Changelog) SetRemote(remoteURL string) {
+	//nolint:gocritic // more options coming
+	switch {
+	case regexpGithubRepoInfos.MatchString(remoteURL):
+		matches := regexpGithubRepoInfos.FindStringSubmatch(remoteURL)
+
+		c.links.compareURL = "https://github.com/%s/compare/%%s...%" + matches[1]
+		c.links.prURL = fmt.Sprintf("https://github.com/%s/pull/$1", matches[1])
+		c.links.commitURL = "https://github.com/%s/commit/%" + matches[1]
+	}
 }
 
 func (c *Changelog) SetOldVersion(version string) {
@@ -34,37 +63,69 @@ func (c *Changelog) SetNewVersion(version string) {
 	c.newVersion = version
 }
 
-func (c *Changelog) AddBreaking(msg string) {
-	c.breaking = append(c.breaking, msg)
+func (c *Changelog) AddBreaking(message, hash string) {
+	c.breaking = append(c.breaking, commit{hash: hash, message: c.decorateMessage(message)})
 }
 
-func (c *Changelog) AddFix(msg string) {
-	c.fixes = append(c.fixes, msg)
+func (c *Changelog) AddFix(message, hash string) {
+	c.fixes = append(c.fixes, commit{hash: hash, message: c.decorateMessage(message)})
 }
 
-func (c *Changelog) AddFeature(msg string) {
-	c.features = append(c.features, msg)
+func (c *Changelog) AddFeature(message, hash string) {
+	c.features = append(c.features, commit{hash: hash, message: c.decorateMessage(message)})
 }
 
 func (c *Changelog) getCompareLink() string {
-	switch true {
-	case os.Getenv("GITHUB_ACTIONS") == "true":
-		return fmt.Sprintf("https://github.com/%s/compare/v%s...v%s", os.Getenv("GITHUB_REPOSITORY"), c.oldVersion, c.newVersion)
+	if c.links.compareURL == "" {
+		return ""
 	}
 
-	return ""
+	return fmt.Sprintf(c.links.compareURL, c.oldVersion, c.newVersion)
+}
+
+func (c *Changelog) getCommitLink(hash string) string {
+	if c.links.commitURL == "" {
+		return ""
+	}
+
+	return fmt.Sprintf(c.links.commitURL, hash)
+}
+
+// decorateMessage decorates the message with links to PRs if possible.
+func (c *Changelog) decorateMessage(message string) string {
+	if c.links.prURL == "" {
+		return message
+	}
+
+	//nolint:gocritic // more options coming
+	switch {
+	case regexpPRNumber.MatchString(message):
+		return regexpPRNumber.ReplaceAllString(message, fmt.Sprintf("([#$1](%s))", c.links.prURL))
+	}
+
+	return message
 }
 
 func (c *Changelog) String() string {
-	sb := strings.Builder{}
+	if c.Len() == 0 {
+		return ""
+	}
+
+	sb := &strings.Builder{}
 
 	date := time.Now().Format("2006-01-02")
 	link := c.getCompareLink()
 
-	if link != "" {
-		sb.WriteString(fmt.Sprintf("## [%s](%s) (%s)", c.newVersion, link, date))
+	if strings.HasSuffix(c.newVersion, ".0") {
+		sb.WriteString("## ")
 	} else {
-		sb.WriteString(fmt.Sprintf("## %s (%s)", c.newVersion, date))
+		sb.WriteString("### ")
+	}
+
+	if link != "" {
+		sb.WriteString(fmt.Sprintf("[%s](%s) (%s)\n\n", c.newVersion, link, date))
+	} else {
+		sb.WriteString(fmt.Sprintf("%s (%s)\n\n", c.newVersion, date))
 	}
 
 	c.writeSection(sb, "⚠ BREAKING CHANGES", c.breaking)
@@ -74,22 +135,34 @@ func (c *Changelog) String() string {
 	return sb.String()
 }
 
-func (c *Changelog) writeSection(sb strings.Builder, header string, entries []string) {
+func (c *Changelog) writeSection(sb *strings.Builder, header string, entries []commit) {
 	if len(entries) == 0 {
 		return
 	}
 
-	sb.WriteString("## ")
+	sb.WriteString("### ")
 	sb.WriteString(header)
-	sb.WriteString("\n\n * ")
-	sb.WriteString(strings.Join(entries, "\n* "))
 	sb.WriteString("\n\n")
+
+	for _, entry := range entries {
+		link := c.getCommitLink(entry.hash)
+
+		if link != "" {
+			sb.WriteString(fmt.Sprintf("* %s ([%s](%s))", entry.message, entry.hash, link))
+		} else {
+			sb.WriteString(fmt.Sprintf("* %s (%s)", entry.message, entry.hash))
+		}
+
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
 }
 
 func (c *Changelog) WriteTo(filePath string) error {
 	data, err := os.ReadFile(filePath)
-	if errors.Is(err, os.ErrNotExist) {
-		changelog := fmt.Sprintf("# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n<!-- INSERT COMMENT -->\n%s\n", c.String())
+	if errors.Is(err, os.ErrNotExist) || len(data) == 0 {
+		changelog := "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n<!-- INSERT COMMENT -->\n" + c.String()
 
 		err = os.WriteFile(filePath, []byte(changelog), 0o600)
 		if err != nil {
@@ -104,10 +177,10 @@ func (c *Changelog) WriteTo(filePath string) error {
 	}
 
 	if !bytes.Contains(data, []byte("<!-- INSERT COMMENT -->")) {
-		return errors.New("changelog file does not contain <!-- INSERT COMMENT -->")
+		return ErrMissingPlaceholder
 	}
 
-	data = bytes.Replace(data, []byte("<!-- INSERT COMMENT -->"), []byte(fmt.Sprintf("<!-- INSERT COMMENT -->\n%s\n\n", c.String())), 1)
+	data = bytes.Replace(data, []byte("<!-- INSERT COMMENT -->"), []byte("<!-- INSERT COMMENT -->\n"+c.String()), 1)
 
 	err = os.WriteFile(filePath, data, 0)
 	if err != nil {

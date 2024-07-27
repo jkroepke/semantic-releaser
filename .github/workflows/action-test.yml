@@ -35,9 +35,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - run: find .
-
-    - uses: ./setups-action/
+    - uses: ./setup-action/
       id: install
 
     - name: Get the helm-charts-semantic-releaser

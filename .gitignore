@@ -2,6 +2,8 @@
 .vscode
 tools/bin/
 node_modules/
+helm-charts-semantic-releaser
+helm-charts-semantic-releaser.exe
 
 ### Go template
 # If you prefer the allow list template instead of the deny list, see community template:

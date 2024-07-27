@@ -1,3 +1,3 @@
-module github.com/jkropke/$REPO
+module github.com/jkropke/helm-charts-semantic-releaser
 
 go 1.22

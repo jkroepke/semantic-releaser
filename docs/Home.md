@@ -1,3 +1,3 @@
 # Home
 
-Welcome to the $REPO wiki!
+Welcome to the helm-charts-semantic-releaser wiki!

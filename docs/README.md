@@ -1,5 +1,5 @@
-# Documentation of $REPO
+# Documentation of helm-charts-semantic-releaser
 
-Please note, all markdown files are synced with the $REPO wiki to improve the readability of the pages.
+Please note, all markdown files are synced with the helm-charts-semantic-releaser wiki to improve the readability of the pages.
 
-https://github.com/jkroepke/$REPO/wiki
+https://github.com/jkroepke/helm-charts-semantic-releaser/wiki

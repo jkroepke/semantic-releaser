@@ -1,7 +1,7 @@
 version: 2
 
 builds:
-  - binary: $REPO
+  - binary: helm-charts-semantic-releaser
     goos:
       - linux
     goarch:
@@ -20,7 +20,7 @@ builds:
         -s -w
 
 # kos:
-#   - repository: ghcr.io/jkroepke/$REPO
+#   - repository: ghcr.io/jkroepke/helm-charts-semantic-releaser
 #     tags:
 #       - "{{.Version}}"
 #       - latest
@@ -37,7 +37,7 @@ builds:
 #       org.opencontainers.image.title: "{{.ProjectName}}"
 #       org.opencontainers.image.revision: "{{.FullCommit}}"
 #       org.opencontainers.image.version: "{{.Version}}"
-#       org.opencontainers.image.source: "https://github.com/jkroepke/$REPO"
+#       org.opencontainers.image.source: "https://github.com/jkroepke/helm-charts-semantic-releaser"
 #       org.opencontainers.image.description: "Infinity Datasource Proxy is a middleware designed to enhance the functionality of the Infinity Datasource plugin for Grafana by addressing its limitations and extending its capabilities."
 #
 # docker_signs:

@@ -8,14 +8,15 @@ import (
 
 type Config struct {
 	ChartsDir         string
-	CreateGitTag      bool
 	OciRepositoryBase string
 	HelmBinaryPath    string
+	GitTagPattern     string
 }
 
 func New() *Config {
 	return &Config{
-		ChartsDir: "charts",
+		ChartsDir:     "charts",
+		GitTagPattern: "{chart}/{version}",
 	}
 }
 
@@ -28,10 +29,10 @@ func (c *Config) Load(args []string, logWriter io.Writer) error {
 		"Location of charts",
 	)
 
-	flagSet.BoolVar(&c.CreateGitTag,
-		"create-git-tag",
-		lookupEnvOrBool("CREATE_GIT_TAG", c.CreateGitTag),
-		"Create git tags for each release",
+	flagSet.StringVar(&c.GitTagPattern,
+		"git-tag-pattern",
+		lookupEnvOrString("GIT_TAG_PATTERN", c.GitTagPattern),
+		"Pattern for git tags",
 	)
 
 	flagSet.StringVar(&c.OciRepositoryBase,

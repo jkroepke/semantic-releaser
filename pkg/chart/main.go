@@ -103,6 +103,11 @@ func (c *Chart) Release(helmClient helm.Client, version semver.Version, changelo
 }
 
 func (c *Chart) CommitToRepository(version semver.Version, changelogEntries *changelog.Changelog) error {
+	err := changelogEntries.WriteTo(filepath.Join(c.chartPath, "CHANGELOG.md"))
+	if err != nil {
+		return fmt.Errorf("failed to write changelog: %w", err)
+	}
+
 	worktree, err := c.repo.Worktree()
 	if err != nil {
 		return fmt.Errorf("failed to get worktree: %w", err)
@@ -111,6 +116,11 @@ func (c *Chart) CommitToRepository(version semver.Version, changelogEntries *cha
 	_, err = worktree.Add(filepath.Join(c.chartPath, "Chart.yaml"))
 	if err != nil {
 		return fmt.Errorf("failed to add Chart.yaml: %w", err)
+	}
+
+	_, err = worktree.Add(filepath.Join(c.chartPath, "CHANGELOG.md"))
+	if err != nil {
+		return fmt.Errorf("failed to add CHANGELOG.md: %w", err)
 	}
 
 	changelogSummarize := ""
@@ -127,13 +137,9 @@ func (c *Chart) CommitToRepository(version semver.Version, changelogEntries *cha
 		return fmt.Errorf("failed to commit: %w", err)
 	}
 
-	if c.conf.CreateGitTag {
-		tagName := fmt.Sprintf("%s/%s", c.name, version.String())
-
-		_, err = c.repo.CreateTag(tagName, commit, nil)
-		if err != nil {
-			return fmt.Errorf("failed to create tag: %w", err)
-		}
+	_, err = c.repo.CreateTag(c.getGitTag(version.String()), commit, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create tag: %w", err)
 	}
 
 	err = c.repo.Push(&git.PushOptions{
@@ -166,6 +172,10 @@ func (c *Chart) CurrentVersion() string {
 	return c.currentVersion.String()
 }
 
+func (c *Chart) getGitTag(version string) string {
+	return strings.NewReplacer("{chart}", c.name, "{version}", version).Replace(c.conf.GitTagPattern)
+}
+
 func (c *Chart) DetectRelease() (semver.Version, *changelog.Changelog, error) {
 	repoLogs, err := c.repo.Log(&git.LogOptions{
 		PathFilter: func(s string) bool {
@@ -177,9 +187,22 @@ func (c *Chart) DetectRelease() (semver.Version, *changelog.Changelog, error) {
 	}
 
 	changelogEntries := changelog.New()
+	changelogEntries.SetOldVersion(c.currentVersion.String())
+
 	bump := cc.UnknownVersion
 
+	tagCommitHash := ""
+
+	tag, err := c.repo.Tag(c.getGitTag(c.currentVersion.String()))
+	if err == nil {
+		tagCommitHash = tag.Hash().String()
+	}
+
 	for log, err := repoLogs.Next(); err == nil; _, err = repoLogs.Next() {
+		if tagCommitHash == log.Hash.String() {
+			break
+		}
+
 		commitVersionBump, _ := c.parseCommitMessage([]byte(log.Message))
 
 		switch commitVersionBump {
@@ -213,6 +236,7 @@ func (c *Chart) DetectRelease() (semver.Version, *changelog.Changelog, error) {
 
 	version := utils.IncrementSemVerVersion(c.currentVersion, bump)
 
+	changelogEntries.SetNewVersion(version.String())
 	c.logger.Info().Str("version", version.String()).Msg("commits detected")
 
 	return version, changelogEntries, nil

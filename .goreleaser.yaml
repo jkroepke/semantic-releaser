@@ -4,6 +4,8 @@ builds:
   - binary: helm-charts-semantic-releaser
     goos:
       - linux
+      - darwin
+      - windows
     goarch:
       - amd64
       - arm64

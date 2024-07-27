@@ -27,7 +27,6 @@ issues:
 linters-settings:
   varnamelen:
     ignore-names:
-      - tt
       - tc
     ignore-decls:
       - i int
@@ -36,6 +35,7 @@ linters-settings:
       - ok bool
       - id string
       - w http.ResponseWriter
+      - wg sync.WaitGroup
       - rt http.RoundTripper
       - r *http.Request
       - l net.Listener

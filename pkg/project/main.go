@@ -1,16 +1,20 @@
 package project
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/jkroepke/semantic-releaser/pkg/changelog"
+	"github.com/jkroepke/semantic-releaser/pkg/command"
 	"github.com/jkroepke/semantic-releaser/pkg/config"
 	"github.com/jkroepke/semantic-releaser/pkg/utils"
 	cc "github.com/leodido/go-conventionalcommits"
@@ -22,23 +26,77 @@ func New(
 	logger zerolog.Logger, conf *config.Config, repo *git.Repository, commitParser cc.Machine, name string,
 ) (*Project, error) {
 	project := &Project{
-		logger:       logger,
-		conf:         conf,
-		repo:         repo,
-		commitParser: commitParser,
-		name:         name,
-		projectPath:  filepath.Join(conf.ProjectsDir, name),
+		logger:         logger,
+		conf:           conf,
+		repo:           repo,
+		commitParser:   commitParser,
+		name:           name,
+		projectPath:    filepath.Join(conf.ProjectsDir, name),
+		currentVersion: semver.New(0, 0, 0, "", ""),
 	}
 
-	if err := project.ReadProjectConfig(); err != nil {
+	if err := project.readProjectConfig(); err != nil {
 		return nil, fmt.Errorf("failed to read project config: %w", err)
+	}
+
+	if err := project.readCurrentVersion(); err != nil {
+		return nil, fmt.Errorf("failed to read current version: %w", err)
 	}
 
 	return project, nil
 }
 
-// ReadProjectConfig reads the project configuration from the project config file.
-func (c *Project) ReadProjectConfig() error {
+func (c *Project) CurrentVersion() string {
+	return c.currentVersion.String()
+}
+
+func (c *Project) Release(version semver.Version, changelogEntries *changelog.Changelog) error {
+	c.logger.Info().Str("version", version.String()).Msg("releasing project")
+
+	if err := c.setVersion(version); err != nil {
+		return fmt.Errorf("failed to set version: %w", err)
+	}
+
+	if err := c.commitToRepository(version, changelogEntries); err != nil {
+		return fmt.Errorf("failed to commit to repository: %w", err)
+	}
+
+	if err := c.publish(version); err != nil {
+		return fmt.Errorf("failed to publish: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Project) setVersion(version semver.Version) error {
+	if c.config.Commands.SetNewVersion == "" {
+		return nil
+	}
+
+	tmpl, err := template.New("publish").Parse(c.config.Commands.SetNewVersion)
+	if err != nil {
+		return fmt.Errorf("failed to parse set version command template: %w", err)
+	}
+
+	var buf bytes.Buffer
+
+	if err = tmpl.Execute(&buf, map[string]string{
+		"nextVersion": version.String(),
+		"projectName": c.name,
+		"projectPath": c.projectPath,
+	}); err != nil {
+		return fmt.Errorf("failed to execute set version command template: %w", err)
+	}
+
+	if err = command.Run(buf.String(), c.projectPath); err != nil {
+		return fmt.Errorf("failed to publish: %w", err)
+	}
+
+	return nil
+}
+
+// readProjectConfig reads the project configuration from the project config file.
+func (c *Project) readProjectConfig() error {
 	worktree, err := c.repo.Worktree()
 	if err != nil {
 		return fmt.Errorf("failed to get worktree: %w", err)
@@ -62,21 +120,75 @@ func (c *Project) ReadProjectConfig() error {
 	return nil
 }
 
-func (c *Project) Release(version semver.Version, changelogEntries *changelog.Changelog) error {
-	c.logger.Info().Str("version", version.String()).Msg("releasing project")
-
-	if err := c.SetVersion(version); err != nil {
-		return fmt.Errorf("failed to set project version: %w", err)
+func (c *Project) publish(version semver.Version) error {
+	if c.config.Commands.Publish == "" {
+		return nil
 	}
 
-	if err := c.CommitToRepository(version, changelogEntries); err != nil {
-		return fmt.Errorf("failed to commit to repository: %w", err)
+	tmpl, err := template.New("publish").Parse(c.config.Commands.Publish)
+	if err != nil {
+		return fmt.Errorf("failed to parse publish command template: %w", err)
+	}
+
+	var buf bytes.Buffer
+
+	if err = tmpl.Execute(&buf, map[string]string{
+		"nextVersion": version.String(),
+		"projectName": c.name,
+		"projectPath": c.projectPath,
+	}); err != nil {
+		return fmt.Errorf("failed to execute publish command template: %w", err)
+	}
+
+	if err = command.Run(buf.String(), c.projectPath); err != nil {
+		return fmt.Errorf("failed to publish: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Project) CommitToRepository(version semver.Version, changelogEntries *changelog.Changelog) error {
+// readCurrentVersion reads the current version from the git repository file.
+func (c *Project) readCurrentVersion() error {
+	tags, err := c.repo.Tags()
+	if err != nil {
+		return fmt.Errorf("failed to get tags: %w", err)
+	}
+
+	tagRegex := strings.NewReplacer(`\{project\}`, c.name, `\{version\}`, "(.*)").
+		Replace(regexp.QuoteMeta(c.conf.GitTagPattern))
+
+	regTagPattern, err := regexp.Compile(tagRegex)
+	if err != nil {
+		return fmt.Errorf("failed to compile tag pattern: %w", err)
+	}
+
+	if err = tags.ForEach(func(tag *plumbing.Reference) error {
+		found := regTagPattern.FindAllStringSubmatch(tag.Name().Short(), 1)
+		switch len(found) {
+		case 0:
+			return nil
+		case 1:
+			version, err := semver.NewVersion(found[0][1])
+			if err != nil {
+				return fmt.Errorf("failed to parse version %q from tag %q: %w", found[0][1], tag.Name().Short(), err)
+			}
+
+			if version.GreaterThan(c.currentVersion) {
+				c.currentVersion = version
+			}
+
+			return nil
+		default:
+			return fmt.Errorf("%s: %w", tag.Name().Short(), ErrMultipleMatchInTag)
+		}
+	}); err != nil {
+		return fmt.Errorf("failed to iterate tags: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Project) commitToRepository(version semver.Version, changelogEntries *changelog.Changelog) error {
 	worktree, err := c.repo.Worktree()
 	if err != nil {
 		return fmt.Errorf("failed to get worktree: %w", err)
@@ -125,26 +237,6 @@ func (c *Project) CommitToRepository(version semver.Version, changelogEntries *c
 	}
 
 	return nil
-}
-
-func (c *Project) SetVersion(version semver.Version) error {
-	chartYamlPath := filepath.Join(c.projectPath, "Project.yaml")
-
-	chartYamlBytes, err := os.ReadFile(chartYamlPath)
-	if err != nil {
-		return fmt.Errorf("failed to read Project.yaml: %w", err)
-	}
-
-	chartYamlBytes = regexpVersion.ReplaceAll(chartYamlBytes, []byte("version: "+version.String()))
-	if err := os.WriteFile(chartYamlPath, chartYamlBytes, 0o600); err != nil {
-		return fmt.Errorf("failed to write Project.yaml: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Project) CurrentVersion() string {
-	return c.currentVersion.String()
 }
 
 func (c *Project) getGitTag(version string) string {

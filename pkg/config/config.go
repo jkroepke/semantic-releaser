@@ -16,6 +16,7 @@ type Config struct {
 
 func New() *Config {
 	return &Config{
+		ConfigFilePath:    ".releaser.yaml",
 		GenerateChangelog: true,
 		GitTagPattern:     "{project}/{version}",
 		ProjectsDir:       "charts",

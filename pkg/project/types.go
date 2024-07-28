@@ -1,6 +1,7 @@
 package project
 
 import (
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
 	"github.com/jkroepke/semantic-releaser/pkg/config"
 	cc "github.com/leodido/go-conventionalcommits"
@@ -8,9 +9,10 @@ import (
 )
 
 type Project struct {
-	name        string
-	projectPath string
-	config      Config
+	name           string
+	projectPath    string
+	currentVersion *semver.Version
+	config         Config
 
 	logger       zerolog.Logger
 	conf         *config.Config
@@ -23,6 +25,6 @@ type Config struct {
 }
 
 type ConfigCommands struct {
-	SetNewVersion     string `yaml:"setNewVersion"`
-	PublishNewVersion string `yaml:"publishNewVersion"`
+	SetNewVersion string `yaml:"setNewVersion"`
+	Publish       string `yaml:"publishNewVersion"`
 }

@@ -1,5 +1,5 @@
-# Documentation of helm-charts-semantic-releaser
+# Documentation of semantic-releaser
 
-Please note, all markdown files are synced with the helm-charts-semantic-releaser wiki to improve the readability of the pages.
+Please note, all markdown files are synced with the semantic-releaser wiki to improve the readability of the pages.
 
-https://github.com/jkroepke/helm-charts-semantic-releaser/wiki
+https://github.com/jkroepke/semantic-releaser/wiki

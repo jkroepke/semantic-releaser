@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/jkroepke/helm-charts-semantic-releaser/pkg/chart"
-	"github.com/jkroepke/helm-charts-semantic-releaser/pkg/config"
-	"github.com/jkroepke/helm-charts-semantic-releaser/pkg/helm"
+	"github.com/jkroepke/semantic-releaser/pkg/chart"
+	"github.com/jkroepke/semantic-releaser/pkg/config"
+	"github.com/jkroepke/semantic-releaser/pkg/helm"
 	cc "github.com/leodido/go-conventionalcommits"
 	"github.com/rs/zerolog"
 )

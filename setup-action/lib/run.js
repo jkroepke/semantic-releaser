@@ -40,8 +40,8 @@ const fs = __importStar(require("fs"));
 const toolCache = __importStar(require("@actions/tool-cache"));
 const core = __importStar(require("@actions/core"));
 const http = __importStar(require("@actions/http-client"));
-const toolName = 'helm-charts-semantic-releaser';
-const githubRepo = 'jkroepke/helm-charts-semantic-releaser';
+const toolName = 'semantic-releaser';
+const githubRepo = 'jkroepke/semantic-releaser';
 const stableVersion = '0.0.1';
 function getExecutableExtension() {
     if (os.type().match(/^Win/)) {

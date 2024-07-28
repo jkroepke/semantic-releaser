@@ -38,5 +38,5 @@ jobs:
     - uses: ./setup-action/
       id: install
 
-    - name: Get the helm-charts-semantic-releaser
-      run: helm-charts-semantic-releaser --help
+    - name: Get the semantic-releaser
+      run: semantic-releaser --help

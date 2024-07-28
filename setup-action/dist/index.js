@@ -47,8 +47,8 @@ const fs = __importStar(__nccwpck_require__(7147));
 const toolCache = __importStar(__nccwpck_require__(7784));
 const core = __importStar(__nccwpck_require__(2186));
 const http = __importStar(__nccwpck_require__(6255));
-const toolName = 'helm-charts-semantic-releaser';
-const githubRepo = 'jkroepke/helm-charts-semantic-releaser';
+const toolName = 'semantic-releaser';
+const githubRepo = 'jkroepke/semantic-releaser';
 const stableVersion = '0.0.1';
 function getExecutableExtension() {
     if (os.type().match(/^Win/)) {

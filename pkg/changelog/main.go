@@ -2,9 +2,8 @@ package changelog
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"os"
+	"io"
 	"regexp"
 	"strings"
 	"time"
@@ -159,21 +158,21 @@ func (c *Changelog) writeSection(sb *strings.Builder, header string, entries []c
 	sb.WriteString("\n")
 }
 
-func (c *Changelog) WriteTo(filePath string) error {
-	data, err := os.ReadFile(filePath)
-	if errors.Is(err, os.ErrNotExist) || len(data) == 0 {
+func (c *Changelog) WriteTo(filePath io.ReadWriteSeeker) error {
+	data, err := io.ReadAll(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+
+	if len(data) == 0 {
 		changelog := "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n<!-- INSERT COMMENT -->\n" + c.String()
 
-		err = os.WriteFile(filePath, []byte(changelog), 0o600)
+		_, err = filePath.Write([]byte(changelog))
 		if err != nil {
 			return fmt.Errorf("failed to write changelog: %w", err)
 		}
 
 		return nil
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to read file: %w", err)
 	}
 
 	if !bytes.Contains(data, []byte("<!-- INSERT COMMENT -->")) {
@@ -182,8 +181,11 @@ func (c *Changelog) WriteTo(filePath string) error {
 
 	data = bytes.Replace(data, []byte("<!-- INSERT COMMENT -->"), []byte("<!-- INSERT COMMENT -->\n"+c.String()), 1)
 
-	err = os.WriteFile(filePath, data, 0)
-	if err != nil {
+	if _, err = filePath.Seek(0, io.SeekStart); err != nil {
+		return fmt.Errorf("failed to seek file: %w", err)
+	}
+
+	if _, err = filePath.Write(data); err != nil {
 		return fmt.Errorf("failed to write changelog: %w", err)
 	}
 

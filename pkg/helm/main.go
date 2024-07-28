@@ -43,7 +43,7 @@ func (c BinaryClient) Package(chartPath string) error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to package chart: %w\n\nSTDOUT:\n\n%s\n\nSTDERR:\n\n%s", err, stdout.String(), stderr.String())
+		return fmt.Errorf("failed to package project: %w\n\nSTDOUT:\n\n%s\n\nSTDERR:\n\n%s", err, stdout.String(), stderr.String())
 	}
 
 	return nil
@@ -63,7 +63,7 @@ func (c BinaryClient) Push(remote, chartPath, chartTgz string) error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to push chart: %w\n\nSTDOUT:\n\n%s\n\nSTDERR:\n\n%s", err, stdout.String(), stderr.String())
+		return fmt.Errorf("failed to push project: %w\n\nSTDOUT:\n\n%s\n\nSTDERR:\n\n%s", err, stdout.String(), stderr.String())
 	}
 
 	return nil

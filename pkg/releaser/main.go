@@ -6,9 +6,8 @@ import (
 	"sync"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/jkroepke/semantic-releaser/pkg/chart"
 	"github.com/jkroepke/semantic-releaser/pkg/config"
-	"github.com/jkroepke/semantic-releaser/pkg/helm"
+	"github.com/jkroepke/semantic-releaser/pkg/project"
 	cc "github.com/leodido/go-conventionalcommits"
 	"github.com/rs/zerolog"
 )
@@ -31,35 +30,22 @@ func New(logger zerolog.Logger, conf *config.Config, repo *git.Repository, commi
 //nolint:cyclop
 func (r *Releaser) Run() error {
 	wg := sync.WaitGroup{}
-	errCh := make(chan error)
 
 	worktree, err := r.repo.Worktree()
 	if err != nil {
 		return fmt.Errorf("failed to get worktree: %w", err)
 	}
 
-	chartDirectories, err := worktree.Filesystem.ReadDir(r.conf.ChartsDir)
+	projects, err := worktree.Filesystem.ReadDir(r.conf.ProjectsDir)
 	if err != nil {
-		return fmt.Errorf("failed to read chart directories: %w", err)
+		return fmt.Errorf("failed to read project directories: %w", err)
 	}
 
-	helmClient, err := helm.New(r.conf.HelmBinaryPath)
-	if err != nil {
-		return fmt.Errorf("failed to initialize Helm client: %w", err)
-	}
+	errCh := make(chan error, len(projects))
 
-	for _, chartDirectory := range chartDirectories {
-		if !chartDirectory.IsDir() {
+	for _, projectDir := range projects {
+		if !projectDir.IsDir() {
 			continue
-		}
-
-		helmChart, err := chart.New(r.logger, r.conf, r.repo, r.commitParser, chartDirectory.Name())
-		if err != nil {
-			if errors.Is(err, chart.ErrChartYamlNotFound) {
-				continue
-			}
-
-			return fmt.Errorf("failed to initialize chart: %w", err)
 		}
 
 		wg.Add(1)
@@ -67,17 +53,30 @@ func (r *Releaser) Run() error {
 		go func() {
 			defer wg.Done()
 
-			nextVersion, changelog, err := helmChart.DetectRelease()
+			proj, err := project.New(r.logger, r.conf, r.repo, r.commitParser, projectDir.Name())
+			if err != nil {
+				if errors.Is(err, project.ErrProjectFileNotFound) {
+					return
+				}
+
+				errCh <- fmt.Errorf("failed to initialize project: %w", err)
+			}
+
+			nextVersion, changelog, err := proj.DetectRelease()
 			if err != nil {
 				errCh <- err
+
+				return
 			}
 
 			if changelog.Len() == 0 {
 				return
 			}
 
-			if err := helmChart.Release(helmClient, nextVersion, changelog); err != nil {
-				errCh <- err
+			if err := proj.Release(nextVersion, changelog); err != nil {
+				errCh <- fmt.Errorf("failed to release project: %w", err)
+
+				return
 			}
 		}()
 	}

@@ -99,8 +99,5 @@ TOOLS_BIN_NAMES  := $(addprefix $(TOOLS_BIN_DIR)/, $(notdir $(TOOLS_PKG_NAMES)))
 .PHONY: install-tools
 install-tools: $(TOOLS_BIN_NAMES)
 
-$(TOOLS_BIN_DIR):
-	@mkdir -p $@
-
-$(TOOLS_BIN_NAMES): $(TOOLS_BIN_DIR) $(TOOLS_MOD_DIR)/go.mod
+$(TOOLS_BIN_NAMES): $(TOOLS_MOD_DIR)/go.mod
 	go build -C $(TOOLS_MOD_DIR) -o $@ -trimpath $(filter %/$(notdir $@),$(TOOLS_PKG_NAMES))

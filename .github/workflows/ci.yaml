@@ -30,17 +30,18 @@ jobs:
       - run: go test ./... -timeout 20s -race -covermode=atomic -coverprofile=coverage.out -coverpkg=./...
       - run: go test ./... -timeout 20s -bench . -benchmem -count 3
 
+      - uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
       - name: go build (with goreleaser)
         uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6
         with:
-          version: latest
+          version: '~> v2'
           args: release --snapshot
         env:
           GITHUB_TOKEN: ""
 
-      - uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         with:
           name: dists
@@ -57,7 +58,6 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@a4f60bb28d35aeee14e6880718e0c85ff1882e64 # v6.0.1
         with:
-          args: --out-format "github-actions,colored-line-number"
           version: ${{ env.GO_LINT_CI_VERSION }}
 
   publish:
@@ -90,7 +90,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6
         with:
-          version: latest
+          version: '~> v2'
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

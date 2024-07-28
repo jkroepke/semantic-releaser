@@ -114,11 +114,11 @@ func TestChangelogNewFile(t *testing.T) {
 
 	assert.Equal(t, 3, changes.Len())
 
-	testChangelogFile, err := os.CreateTemp(t.TempDir(), "CHANGELOG-****.md")
+	testChangelogFile, err := os.CreateTemp(t.TempDir(), "CHANGELOG-*.md")
 	require.NoError(t, err)
 	defer os.Remove(testChangelogFile.Name())
 
-	err = changes.WriteTo(testChangelogFile.Name())
+	err = changes.WriteTo(testChangelogFile)
 	require.NoError(t, err)
 
 	bytes, err := os.ReadFile(testChangelogFile.Name())
@@ -140,14 +140,14 @@ func TestChangelogMissingPlaceholder(t *testing.T) {
 
 	assert.Equal(t, 0, changes.Len())
 
-	testChangelogFile, err := os.CreateTemp(t.TempDir(), "CHANGELOG-****.md")
+	testChangelogFile, err := os.CreateTemp(t.TempDir(), "CHANGELOG-*.md")
 	require.NoError(t, err)
 	defer os.Remove(testChangelogFile.Name())
 
 	err = os.WriteFile(testChangelogFile.Name(), []byte("# Changelog\n\nAll notable changes to this project will be documented in this file.\n"), 0)
 	require.NoError(t, err)
 
-	err = changes.WriteTo(testChangelogFile.Name())
+	err = changes.WriteTo(testChangelogFile)
 	require.Equal(t, changelog.ErrMissingPlaceholder, err)
 }
 
@@ -160,11 +160,15 @@ func TestChangelogExistingFile(t *testing.T) {
 
 	changes.AddFeature("Adding a new feature", "123456")
 
-	testChangelogFile, err := os.CreateTemp(t.TempDir(), "CHANGELOG-****.md")
+	testChangelogFile, err := os.CreateTemp(t.TempDir(), "CHANGELOG-*.md")
 	require.NoError(t, err)
 	defer os.Remove(testChangelogFile.Name())
 
-	err = changes.WriteTo(testChangelogFile.Name())
+	err = changes.WriteTo(testChangelogFile)
+	require.NoError(t, err)
+
+	require.NoError(t, testChangelogFile.Close())
+	testChangelogFile, err = os.OpenFile(testChangelogFile.Name(), os.O_RDWR, 0)
 	require.NoError(t, err)
 
 	changes = changelog.New()
@@ -173,7 +177,7 @@ func TestChangelogExistingFile(t *testing.T) {
 
 	changes.AddFeature("Fixed a bug", "123456")
 
-	err = changes.WriteTo(testChangelogFile.Name())
+	err = changes.WriteTo(testChangelogFile)
 	require.NoError(t, err)
 
 	date := time.Now().Format("2006-01-02")

@@ -1,4 +1,4 @@
-module github.com/jkroepke/helm-charts-semantic-releaser
+module github.com/jkroepke/semantic-releaser
 
 go 1.22.5
 

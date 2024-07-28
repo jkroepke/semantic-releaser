@@ -9,8 +9,8 @@ import * as toolCache from '@actions/tool-cache';
 import * as core from '@actions/core';
 import * as http from "@actions/http-client";
 
-const toolName = 'helm-charts-semantic-releaser';
-const githubRepo = 'jkroepke/helm-charts-semantic-releaser';
+const toolName = 'semantic-releaser';
+const githubRepo = 'jkroepke/semantic-releaser';
 const stableVersion = '0.0.1';
 
 function getExecutableExtension(): string {

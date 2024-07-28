@@ -1,3 +1,3 @@
 # Home
 
-Welcome to the helm-charts-semantic-releaser wiki!
+Welcome to the semantic-releaser wiki!

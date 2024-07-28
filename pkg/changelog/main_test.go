@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jkroepke/helm-charts-semantic-releaser/pkg/changelog"
+	"github.com/jkroepke/semantic-releaser/pkg/changelog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,31 +56,31 @@ func TestChangelog(t *testing.T) {
 		{
 			name: "with http github repo",
 			clFunc: func(cl *changelog.Changelog) {
-				cl.SetRemote("https://github.com/jkroepke/helm-charts-semantic-releaser.git")
+				cl.SetRemote("https://github.com/jkroepke/semantic-releaser.git")
 				cl.SetNewVersion("1.0.1")
 				cl.AddFix("Fixing a bug", "123456")
 			},
-			expectedChangelog: `### [1.0.1](https://github.com/jkroepke/helm-charts-semantic-releaser/compare/1.0.0...1.0.1) (%s)
+			expectedChangelog: `### [1.0.1](https://github.com/jkroepke/semantic-releaser/compare/1.0.0...1.0.1) (%s)
 
 ### Bug Fixes
 
-* Fixing a bug ([123456](https://github.com/jkroepke/helm-charts-semantic-releaser/commit/123456))
+* Fixing a bug ([123456](https://github.com/jkroepke/semantic-releaser/commit/123456))
 
 `,
 		},
 		{
 			name: "with ssh github repo",
 			clFunc: func(cl *changelog.Changelog) {
-				cl.SetRemote("git@github.com:jkroepke/helm-charts-semantic-releaser.git")
+				cl.SetRemote("git@github.com:jkroepke/semantic-releaser.git")
 				cl.SetNewVersion("1.0.1")
 				cl.AddFix("Fixing a bug (#866)", "123456")
 			},
 
-			expectedChangelog: `### [1.0.1](https://github.com/jkroepke/helm-charts-semantic-releaser/compare/1.0.0...1.0.1) (%s)
+			expectedChangelog: `### [1.0.1](https://github.com/jkroepke/semantic-releaser/compare/1.0.0...1.0.1) (%s)
 
 ### Bug Fixes
 
-* Fixing a bug ([#866](https://github.com/jkroepke/helm-charts-semantic-releaser/pull/866)) ([123456](https://github.com/jkroepke/helm-charts-semantic-releaser/commit/123456))
+* Fixing a bug ([#866](https://github.com/jkroepke/semantic-releaser/pull/866)) ([123456](https://github.com/jkroepke/semantic-releaser/commit/123456))
 
 `,
 		},

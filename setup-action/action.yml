@@ -1,8 +1,8 @@
-name: 'helm-charts-semantic-releaser tools installer'
-description: 'Install a specific version of the helm-charts-semantic-releaser binary. Acceptable values are latest or any semantic version string like 0.14.0'
+name: 'semantic-releaser tools installer'
+description: 'Install a specific version of the semantic-releaser binary. Acceptable values are latest or any semantic version string like 0.14.0'
 inputs:
   version:
-    description: 'Version of helm-charts-semantic-releaser'
+    description: 'Version of semantic-releaser'
     required: true
     default: 'latest'
 outputs:

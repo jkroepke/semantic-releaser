@@ -9,6 +9,10 @@
 
 ⭐ Don't forget to star this repository! ⭐
 
+# Status
+
+Work in Progress!
+
 # License
 
 This project is licensed under the [MIT License](https://github.com/jkroepke/semantic-releaser/blob/main/LICENSE.txt).
